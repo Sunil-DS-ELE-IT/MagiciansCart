@@ -14,5 +14,9 @@ data class Product(
     val stock: Int = 0,
     val tags: List<String> = emptyList(),
     val rating: Double = 0.0,
-    val imageUrls: List<String> = emptyList()
+    val imageUrls: List<String> = emptyList(),
+    val duration: String = "",
+    val expectedDeliveryDate: String = "",
+    val shippingMethod: String = "",
+    val deliveryNotes: String = ""
 )
