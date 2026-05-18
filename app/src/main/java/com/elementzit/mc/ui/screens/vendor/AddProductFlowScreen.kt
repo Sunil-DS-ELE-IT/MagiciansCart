@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Notifications
@@ -58,7 +60,8 @@ enum class AddProductStep {
     DETAILS,
     MORE_DETAILS,
     PRICE_QTY_IMAGE,
-    DURATION
+    DURATION,
+    REVIEW_PUBLISH
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -120,6 +123,7 @@ fun AddProductFlowScreen(
                 else -> null
             }
             AddProductStep.DURATION -> if (selectedDuration.isBlank()) "Please select a production duration" else null
+            AddProductStep.REVIEW_PUBLISH -> null
         }
     }
 
@@ -233,25 +237,38 @@ fun AddProductFlowScreen(
                         deliveryNotes = deliveryNotes,
                         onDeliveryNotesChange = { deliveryNotes = it },
                         onBack = { currentStep = AddProductStep.PRICE_QTY_IMAGE },
-                        onSubmit = {
+                        onNext = {
                             val error = validateStep(AddProductStep.DURATION)
                             if (error == null) {
-                                viewModel.saveProduct(Product(
-                                    id = productId ?: "",
-                                    name = productName,
-                                    description = productDescription,
-                                    brand = brandName,
-                                    sku = sku,
-                                    price = productPrice.toDoubleOrNull() ?: 0.0,
-                                    category = selectedCategory,
-                                    stock = productQuantityAvailable.toIntOrNull() ?: 0,
-                                    tags = productTags,
-                                    duration = selectedDuration,
-                                    expectedDeliveryDate = deliveryDate,
-                                    shippingMethod = shippingMethod,
-                                    deliveryNotes = deliveryNotes
-                                ), productId != null)
+                                currentStep = AddProductStep.REVIEW_PUBLISH
                             } else Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+                AddProductStep.REVIEW_PUBLISH -> {
+                    ReviewPublishView(
+                        productName = productName,
+                        category = selectedCategory,
+                        price = productPrice,
+                        stock = productQuantityAvailable,
+                        imageUrl = selectedImageUris.firstOrNull(),
+                        onBack = { currentStep = AddProductStep.DURATION },
+                        onPublish = {
+                            viewModel.saveProduct(Product(
+                                id = productId ?: "",
+                                name = productName,
+                                description = productDescription,
+                                brand = brandName,
+                                sku = sku,
+                                price = productPrice.toDoubleOrNull() ?: 0.0,
+                                category = selectedCategory,
+                                stock = productQuantityAvailable.toIntOrNull() ?: 0,
+                                tags = productTags,
+                                duration = selectedDuration,
+                                expectedDeliveryDate = deliveryDate,
+                                shippingMethod = shippingMethod,
+                                deliveryNotes = deliveryNotes
+                            ), productId != null)
                         }
                     )
                 }
@@ -623,7 +640,7 @@ fun PriceQtyImageStepView(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductDurationView(selectedDuration: String, onDurationChange: (String) -> Unit, deliveryDate: String, onDeliveryDateChange: (String) -> Unit, shippingMethod: String, onShippingMethodChange: (String) -> Unit, deliveryNotes: String, onDeliveryNotesChange: (String) -> Unit, onBack: () -> Unit, onSubmit: () -> Unit) {
+fun ProductDurationView(selectedDuration: String, onDurationChange: (String) -> Unit, deliveryDate: String, onDeliveryDateChange: (String) -> Unit, shippingMethod: String, onShippingMethodChange: (String) -> Unit, deliveryNotes: String, onDeliveryNotesChange: (String) -> Unit, onBack: () -> Unit, onNext: () -> Unit) {
     val durations = listOf("1-3 days", "3-5 days", "5-7 days", "7-10 days", "10-14 days", "Custom")
     val methods = listOf("Express Shipping", "Same Day Delivery", "Pickup only")
     var expanded by remember { mutableStateOf(false) }
@@ -700,6 +717,141 @@ fun ProductDurationView(selectedDuration: String, onDurationChange: (String) -> 
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(value = deliveryNotes, onValueChange = onDeliveryNotesChange, modifier = Modifier.fillMaxWidth().height(100.dp), placeholder = { Text("Add any special delivery instructions...") })
         }
-        StepBottomButtons(onBack = onBack, onNext = onSubmit, nextText = "Submit")
+        StepBottomButtons(onBack = onBack, onNext = onNext, nextText = "Next")
+    }
+}
+
+@Composable
+fun ReviewPublishView(
+    productName: String,
+    category: String,
+    price: String,
+    stock: String,
+    imageUrl: String?,
+    onBack: () -> Unit,
+    onPublish: () -> Unit
+) {
+    val orangeColor = Color(0xFFFF9800)
+    val greenColor = Color(0xFF00A669)
+
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF9F9F9)).padding(bottom = 20.dp)) {
+        HeaderSection()
+        Column(
+            modifier = Modifier.weight(1f).padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "Review & Publish",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF111827)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Review your product details before publishing",
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, Color(0xFFF3F4F6))
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier.size(100.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color(0xFFFFF7ED)
+                    ) {
+                        if (imageUrl != null) {
+                            AsyncImage(
+                                model = imageUrl,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text("🎨", fontSize = 40.sp)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = if (productName.isBlank()) "Product Name" else productName,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF111827)
+                        )
+                        Text(
+                            text = if (category.isBlank()) "Category" else category,
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = orangeColor
+                            ) {
+                                Text(
+                                    text = "₹$price",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFF3F4F6)
+                            ) {
+                                Text(
+                                    text = "Stock: $stock",
+                                    color = Color.Gray,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp).padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Button(
+                onClick = onBack,
+                modifier = Modifier.weight(1f).height(65.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF3F4F6))
+            ) {
+                Text("Back", color = Color(0xFF374151), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+            Button(
+                onClick = onPublish,
+                modifier = Modifier.weight(1.5f).height(65.dp).shadow(elevation = 8.dp, shape = RoundedCornerShape(20.dp)),
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = greenColor)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Publish Product", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            }
+        }
     }
 }
