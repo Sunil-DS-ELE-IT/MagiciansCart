@@ -1,0 +1,17 @@
+package com.elementzit.mc.domain.model
+
+data class Product(
+    val id: String = "",
+    val name: String = "",
+    val description: String = "",
+    val brand: String = "", // Added brand field
+    val sku: String = "",    // Added sku field
+    val price: Double = 0.0,
+    val imageUrl: String = "",
+    val vendorId: String = "",
+    val category: String = "",
+    val quantity: Int = 0,
+    val stock: Int = 0,
+    val tags: List<String> = emptyList(),
+    val rating: Double = 0.0
+)

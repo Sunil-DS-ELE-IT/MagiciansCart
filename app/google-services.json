@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "194123449599",
+    "project_id": "magicianscart-a55af",
+    "storage_bucket": "magicianscart-a55af.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:194123449599:android:db5e0da995d4eb2f1678ca",
+        "android_client_info": {
+          "package_name": "com.elementzit.mc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwn6QPbgvwvGe4vt2bAprfbFuH5ESczqM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,4 @@
+<resources>
+
+    <style name="Theme.Marketplace" parent="Theme.MaterialComponents.Light" />
+</resources>
