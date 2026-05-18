@@ -2,53 +2,74 @@ package com.elementzit.mc.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.elementzit.mc.data.repository.ProductRepository
 import com.elementzit.mc.domain.model.Product
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
-sealed class UiState<out T> {
-    object Idle : UiState<Nothing>()
-    object Loading : UiState<Nothing>()
-    data class Success<T>(val data: T) : UiState<T>()
-    data class Error(val message: String) : UiState<Nothing>()
-}
+data class ProductUiState(
+    val isLoading: Boolean = false,
+    val isSuccess: Boolean = false,
+    val error: String? = null,
+    val message: String? = null
+)
 
 @HiltViewModel
 class AddProductViewModel @Inject constructor(
-    private val firestore: FirebaseFirestore
+    private val repository: ProductRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<UiState<String>>(UiState.Idle)
-    val uiState: StateFlow<UiState<String>> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(ProductUiState())
+    val uiState: StateFlow<ProductUiState> = _uiState.asStateFlow()
+
+    private val _selectedImageUris = MutableStateFlow<List<String>>(emptyList())
+    val selectedImageUris: StateFlow<List<String>> = _selectedImageUris.asStateFlow()
+
+    fun onImagesSelected(uris: List<String>) {
+        _selectedImageUris.value = _selectedImageUris.value + uris
+    }
+
+    fun removeImage(uri: String) {
+        _selectedImageUris.value = _selectedImageUris.value.filter { it != uri }
+    }
 
     fun saveProduct(product: Product, isUpdate: Boolean) {
-        _uiState.value = UiState.Loading
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, isSuccess = false)
             try {
-                val collection = firestore.collection("products")
-                if (isUpdate && product.id.isNotEmpty()) {
-                    collection.document(product.id).set(product).addOnSuccessListener {
-                        _uiState.value = UiState.Success("Product updated successfully")
-                    }.addOnFailureListener {
-                        _uiState.value = UiState.Error(it.message ?: "Update failed")
-                    }
+                val productId = if (isUpdate && product.id.isNotEmpty()) product.id else UUID.randomUUID().toString()
+                val finalProduct = product.copy(id = productId)
+                
+                if (isUpdate) {
+                    repository.updateProduct(finalProduct, _selectedImageUris.value)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isSuccess = true,
+                        message = "Product updated successfully"
+                    )
                 } else {
-                    val docRef = collection.document()
-                    val newProduct = product.copy(id = docRef.id)
-                    docRef.set(newProduct).addOnSuccessListener {
-                        _uiState.value = UiState.Success("Product added successfully")
-                    }.addOnFailureListener {
-                        _uiState.value = UiState.Error(it.message ?: "Add failed")
-                    }
+                    repository.addProduct(finalProduct, _selectedImageUris.value)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isSuccess = true,
+                        message = "Product added successfully"
+                    )
                 }
             } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Unknown error")
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.localizedMessage ?: "An unexpected error occurred"
+                )
             }
         }
+    }
+
+    fun resetState() {
+        _uiState.value = ProductUiState()
     }
 }

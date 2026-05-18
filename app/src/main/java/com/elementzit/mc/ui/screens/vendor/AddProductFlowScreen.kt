@@ -1,6 +1,8 @@
 package com.elementzit.mc.ui.screens.vendor
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -14,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -25,9 +28,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,12 +40,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.elementzit.mc.domain.model.Product
 import com.elementzit.mc.ui.components.FormLabel
 import com.elementzit.mc.ui.components.RoundedTextField
 import com.elementzit.mc.ui.components.TagChip
 import com.elementzit.mc.ui.viewmodel.AddProductViewModel
-import com.elementzit.mc.ui.viewmodel.UiState
+
+// CategoryItem definition removed to use the one from CategoryItem.kt
 
 enum class AddProductStep {
     SELECT_CATEGORY,
@@ -53,15 +60,16 @@ enum class AddProductStep {
 fun AddProductFlowScreen(
     navController: NavController,
     viewModel: AddProductViewModel = hiltViewModel(),
-    category: String? = null
+    category: String? = null,
+    productId: String? = null
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val selectedImageUris by viewModel.selectedImageUris.collectAsState()
 
     var currentStep by remember { mutableStateOf(if (category == null) AddProductStep.SELECT_CATEGORY else AddProductStep.DETAILS) }
     var selectedCategory by remember { mutableStateOf(category ?: "") }
 
-    // State Hoisting
     var productName by remember { mutableStateOf("") }
     var productDescription by remember { mutableStateOf("") }
     var brandName by remember { mutableStateOf("") }
@@ -78,7 +86,12 @@ fun AddProductFlowScreen(
     var productMinQuantity by remember { mutableStateOf("") }
     var showImageUpload by remember { mutableStateOf(false) }
 
-    // Validation helpers
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        viewModel.onImagesSelected(uris.map { it.toString() })
+    }
+
     fun validateStep(step: AddProductStep): String? {
         return when (step) {
             AddProductStep.SELECT_CATEGORY -> if (selectedCategory.isBlank()) "Please select a category" else null
@@ -87,116 +100,134 @@ fun AddProductFlowScreen(
                 productDescription.isBlank() -> "Description is required"
                 else -> null
             }
-            AddProductStep.MORE_DETAILS -> null // Optional
+            AddProductStep.MORE_DETAILS -> null
             AddProductStep.PRICE_QTY_IMAGE -> when {
                 productPrice.toDoubleOrNull() == null || productPrice.toDouble() <= 0 -> "Valid price is required"
                 productQuantityAvailable.toIntOrNull() == null -> "Valid quantity is required"
+                selectedImageUris.isEmpty() && showImageUpload -> "At least one product image is required"
                 else -> null
             }
         }
     }
 
     LaunchedEffect(uiState) {
-        if (uiState is UiState.Success) {
-            Toast.makeText(context, (uiState as UiState.Success).data, Toast.LENGTH_SHORT).show()
+        if (uiState.isSuccess) {
+            Toast.makeText(context, uiState.message ?: "Success", Toast.LENGTH_SHORT).show()
+            viewModel.resetState()
             navController.popBackStack()
-        } else if (uiState is UiState.Error) {
-            Toast.makeText(context, (uiState as UiState.Error).message, Toast.LENGTH_LONG).show()
+        } else if (uiState.error != null) {
+            Toast.makeText(context, uiState.error, Toast.LENGTH_LONG).show()
+            viewModel.resetState()
         }
     }
 
-    AnimatedContent(
-        targetState = currentStep,
-        transitionSpec = {
-            fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
-        },
-        label = "AddProductFlow"
-    ) { step ->
-        when (step) {
-            AddProductStep.SELECT_CATEGORY -> {
-                CategorySelectionView(
-                    selectedCategory = selectedCategory,
-                    onCategorySelected = { selectedCategory = it },
-                    onBackClick = { navController.popBackStack() },
-                    onNextClick = { 
-                        val error = validateStep(AddProductStep.SELECT_CATEGORY)
-                        if (error == null) currentStep = AddProductStep.DETAILS else Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                    }
-                )
-            }
-            AddProductStep.DETAILS -> {
-                ProductDetailsStepView(
-                    productName = productName,
-                    onProductNameChange = { productName = it },
-                    productDescription = productDescription,
-                    onProductDescriptionChange = { productDescription = it },
-                    brandName = brandName,
-                    onBrandNameChange = { brandName = it },
-                    sku = sku,
-                    onSkuChange = { sku = it },
-                    productTags = productTags,
-                    onProductTagsChange = { productTags = it },
-                    onNext = { 
-                        val error = validateStep(AddProductStep.DETAILS)
-                        if (error == null) currentStep = AddProductStep.MORE_DETAILS else Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                    },
-                    onBack = { if (category == null) currentStep = AddProductStep.SELECT_CATEGORY else navController.popBackStack() }
-                )
-            }
-            AddProductStep.MORE_DETAILS -> {
-                MoreDetailsStepView(
-                    productSize = productSize,
-                    onProductSizeChange = { productSize = it },
-                    productColor = productColor,
-                    onProductColorChange = { productColor = it },
-                    productMaterial = productMaterial,
-                    onProductMaterialChange = { productMaterial = it },
-                    productWeight = productWeight,
-                    onProductWeightChange = { productWeight = it },
-                    productDimension = productDimension,
-                    onProductDimensionChange = { productDimension = it },
-                    onNext = { currentStep = AddProductStep.PRICE_QTY_IMAGE },
-                    onBack = { currentStep = AddProductStep.DETAILS }
-                )
-            }
-            AddProductStep.PRICE_QTY_IMAGE -> {
-                PriceQtyImageStepView(
-                    productPrice = productPrice,
-                    onProductPriceChange = { productPrice = it },
-                    productPriceDiscount = productPriceDiscount,
-                    onProductPriceDiscountChange = { productPriceDiscount = it },
-                    productQuantityAvailable = productQuantityAvailable,
-                    onProductQuantityAvailableChange = { productQuantityAvailable = it },
-                    productMinQuantity = productMinQuantity,
-                    onProductMinQuantityChange = { productMinQuantity = it },
-                    showImageUpload = showImageUpload,
-                    onBack = {
-                        if (showImageUpload) {
-                            showImageUpload = false
-                        } else {
-                            currentStep = AddProductStep.MORE_DETAILS
+    Box(modifier = Modifier.fillMaxSize()) {
+        AnimatedContent(
+            targetState = currentStep,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+            },
+            label = "AddProductFlow"
+        ) { step ->
+            when (step) {
+                AddProductStep.SELECT_CATEGORY -> {
+                    CategorySelectionView(
+                        selectedCategory = selectedCategory,
+                        onCategorySelected = { selectedCategory = it },
+                        onBackClick = { navController.popBackStack() },
+                        onNextClick = {
+                            val error = validateStep(AddProductStep.SELECT_CATEGORY)
+                            if (error == null) currentStep = AddProductStep.DETAILS else Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
                         }
-                    },
-                    onSubmit = {
-                        val error = validateStep(AddProductStep.PRICE_QTY_IMAGE)
-                        if (error == null) {
-                            if (!showImageUpload) {
-                                showImageUpload = true
+                    )
+                }
+                AddProductStep.DETAILS -> {
+                    ProductDetailsStepView(
+                        productName = productName,
+                        onProductNameChange = { productName = it },
+                        productDescription = productDescription,
+                        onProductDescriptionChange = { productDescription = it },
+                        brandName = brandName,
+                        onBrandNameChange = { brandName = it },
+                        sku = sku,
+                        onSkuChange = { sku = it },
+                        productTags = productTags,
+                        onProductTagsChange = { productTags = it },
+                        onNext = {
+                            val error = validateStep(AddProductStep.DETAILS)
+                            if (error == null) currentStep = AddProductStep.MORE_DETAILS else Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                        },
+                        onBack = { if (category == null) currentStep = AddProductStep.SELECT_CATEGORY else navController.popBackStack() }
+                    )
+                }
+                AddProductStep.MORE_DETAILS -> {
+                    MoreDetailsStepView(
+                        productSize = productSize,
+                        onProductSizeChange = { productSize = it },
+                        productColor = productColor,
+                        onProductColorChange = { productColor = it },
+                        productMaterial = productMaterial,
+                        onProductMaterialChange = { productMaterial = it },
+                        productWeight = productWeight,
+                        onProductWeightChange = { productWeight = it },
+                        productDimension = productDimension,
+                        onProductDimensionChange = { productDimension = it },
+                        onNext = { currentStep = AddProductStep.PRICE_QTY_IMAGE },
+                        onBack = { currentStep = AddProductStep.DETAILS }
+                    )
+                }
+                AddProductStep.PRICE_QTY_IMAGE -> {
+                    PriceQtyImageStepView(
+                        productPrice = productPrice,
+                        onProductPriceChange = { productPrice = it },
+                        productPriceDiscount = productPriceDiscount,
+                        onProductPriceDiscountChange = { productPriceDiscount = it },
+                        productQuantityAvailable = productQuantityAvailable,
+                        onProductQuantityAvailableChange = { productQuantityAvailable = it },
+                        productMinQuantity = productMinQuantity,
+                        onProductMinQuantityChange = { productMinQuantity = it },
+                        selectedImageUris = selectedImageUris,
+                        onImageSelectClick = { imagePickerLauncher.launch("image/*") },
+                        onRemoveImage = { viewModel.removeImage(it) },
+                        showImageUpload = showImageUpload,
+                        onBack = {
+                            if (showImageUpload) {
+                                showImageUpload = false
                             } else {
-                                viewModel.saveProduct(Product(
-                                    name = productName,
-                                    description = productDescription,
-                                    brand = brandName,
-                                    sku = sku,
-                                    price = productPrice.toDoubleOrNull() ?: 0.0,
-                                    category = selectedCategory,
-                                    stock = productQuantityAvailable.toIntOrNull() ?: 0,
-                                    tags = productTags
-                                ), false)
+                                currentStep = AddProductStep.MORE_DETAILS
                             }
-                        } else Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                    }
-                )
+                        },
+                        onSubmit = {
+                            val error = validateStep(AddProductStep.PRICE_QTY_IMAGE)
+                            if (error == null) {
+                                if (!showImageUpload) {
+                                    showImageUpload = true
+                                } else {
+                                    viewModel.saveProduct(Product(
+                                        id = productId ?: "",
+                                        name = productName,
+                                        description = productDescription,
+                                        brand = brandName,
+                                        sku = sku,
+                                        price = productPrice.toDoubleOrNull() ?: 0.0,
+                                        category = selectedCategory,
+                                        stock = productQuantityAvailable.toIntOrNull() ?: 0,
+                                        tags = productTags
+                                    ), productId != null)
+                                }
+                            } else Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+            }
+        }
+
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color(0xFFFF9800))
             }
         }
     }
@@ -278,7 +309,6 @@ fun CategoryFlowCard(
     }
 }
 
-// --- Common UI Parts for Steps ---
 @Composable
 private fun HeaderSection() {
     val orangeColor = Color(0xFFFF9800)
@@ -462,8 +492,11 @@ fun PriceQtyImageStepView(
     productPriceDiscount: String, onProductPriceDiscountChange: (String) -> Unit,
     productQuantityAvailable: String, onProductQuantityAvailableChange: (String) -> Unit,
     productMinQuantity: String, onProductMinQuantityChange: (String) -> Unit,
+    selectedImageUris: List<String>,
+    onImageSelectClick: () -> Unit,
+    onRemoveImage: (String) -> Unit,
     showImageUpload: Boolean,
-    onNext: () -> Unit = {}, onBack: () -> Unit, onSubmit: () -> Unit
+    onBack: () -> Unit, onSubmit: () -> Unit
 ) {
     val scrollState = rememberScrollState()
     val orangeColor = Color(0xFFFF9800)
@@ -497,21 +530,58 @@ fun PriceQtyImageStepView(
                     RoundedTextField(value = productMinQuantity, onValueChange = onProductMinQuantityChange, placeholder = "1")
                 } else {
                     Box(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp).border(2.dp, Color.LightGray, RoundedCornerShape(24.dp)).background(Color.Transparent, RoundedCornerShape(24.dp)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp)
+                            .border(2.dp, Color.LightGray, RoundedCornerShape(24.dp))
+                            .background(Color.Transparent, RoundedCornerShape(24.dp))
+                            .clickable { onImageSelectClick() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, modifier = Modifier.padding(vertical = 40.dp)) {
-                            Surface(shape = RoundedCornerShape(12.dp), color = orangeColor, modifier = Modifier.size(80.dp)) {
-                                Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Upload, "Upload Icon", tint = Color.White, modifier = Modifier.size(40.dp)) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, modifier = Modifier.padding(vertical = 24.dp)) {
+                            Surface(shape = RoundedCornerShape(12.dp), color = orangeColor, modifier = Modifier.size(60.dp)) {
+                                Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Upload, "Upload Icon", tint = Color.White, modifier = Modifier.size(30.dp)) }
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Upload Product Images", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF374151))
-                            Text("Drag & drop or click to browse", fontSize = 14.sp, color = Color.Gray)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("Upload Product Images", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF374151))
+                            Text("Select one or more images", fontSize = 12.sp, color = Color.Gray)
                         }
+                    }
+
+                    if (selectedImageUris.isNotEmpty()) {
+                        FormLabel("Selected Images")
+                        Spacer(Modifier.height(8.dp))
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            items(selectedImageUris) { uri ->
+                                Box(modifier = Modifier.size(100.dp)) {
+                                    AsyncImage(
+                                        model = uri,
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    IconButton(
+                                        onClick = { onRemoveImage(uri) },
+                                        modifier = Modifier.align(Alignment.TopEnd).size(24.dp).background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Remove", tint = Color.White, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
                     }
                 }
             }
-            StepBottomButtons(onBack = onBack, onNext = onSubmit, nextText = if(showImageUpload) "Submit" else "Next")
+            StepBottomButtons(
+                onBack = onBack,
+                onNext = onSubmit,
+                nextText = if(showImageUpload) "Submit" else "Next",
+                isNextEnabled = if(showImageUpload) selectedImageUris.isNotEmpty() else true
+            )
         }
     }
 }

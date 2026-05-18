@@ -13,5 +13,6 @@ data class Product(
     val quantity: Int = 0,
     val stock: Int = 0,
     val tags: List<String> = emptyList(),
-    val rating: Double = 0.0
+    val rating: Double = 0.0,
+    val imageUrls: List<String> = emptyList()
 )
