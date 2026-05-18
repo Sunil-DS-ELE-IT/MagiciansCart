@@ -32,6 +32,7 @@ import com.elementzit.mc.ui.screens.vendor.AddProductMoreDetailsScreen
 import com.elementzit.mc.ui.screens.vendor.AddProductPriceQtyScreen
 import com.elementzit.mc.ui.screens.vendor.AddProductFlowScreen
 import com.elementzit.mc.ui.screens.vendor.CategoryScreen
+import com.elementzit.mc.ui.screens.vendor.ProductListScreen
 import com.elementzit.mc.ui.viewmodel.VendorProductViewModel
 
 @Composable
@@ -194,5 +195,9 @@ fun MarketplaceNavGraph(
             val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
             TrackOrderScreen(navController = navController, orderId = orderId)
         }
+        composable("product_list") {
+            ProductListScreen(navController = navController)
+        }
+
     }
 }

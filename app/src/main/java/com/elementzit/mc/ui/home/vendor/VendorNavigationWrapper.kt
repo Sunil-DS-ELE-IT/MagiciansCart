@@ -16,8 +16,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.elementzit.mc.ui.home.vendor.VendorHomeScreen
+import com.elementzit.mc.ui.screens.vendor.ProductListScreen
 import com.elementzit.mc.ui.viewmodel.VendorProductViewModel
 
 data class BottomNavItem(val title: String, val icon: ImageVector, val route: String)
@@ -36,10 +38,11 @@ fun VendorNavigationWrapper(navController: NavController, onLogout: () -> Unit, 
     Scaffold(
         bottomBar = {
             NavigationBar(
-                containerColor = Color(0xFFF8F5EF), // Match the cream background from screenshot
+                containerColor = Color(0xFFFDFDFD),
                 tonalElevation = 0.dp
             ) {
-                val currentRoute = bottomNavController.currentBackStackEntry?.destination?.route
+                val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
                 items.forEach { item ->
                     val isSelected = currentRoute == item.route
                     NavigationBarItem(
@@ -47,17 +50,17 @@ fun VendorNavigationWrapper(navController: NavController, onLogout: () -> Unit, 
                         label = { 
                             Text(
                                 item.title, 
-                                fontSize = 12.sp, 
+                                fontSize = 11.sp, 
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             ) 
                         },
                         selected = isSelected,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = Color(0xFFFF6B00),
-                            unselectedIconColor = Color(0xFF8E8E93),
+                            unselectedIconColor = Color(0xFF9CA3AF),
                             selectedTextColor = Color(0xFFFF6B00),
-                            unselectedTextColor = Color(0xFF8E8E93),
-                            indicatorColor = Color(0xFFF5EAD6) // The soft background bubble
+                            unselectedTextColor = Color(0xFF9CA3AF),
+                            indicatorColor = Color(0xFFFFF7ED)
                         ),
                         onClick = {
                             bottomNavController.navigate(item.route) {
@@ -71,16 +74,17 @@ fun VendorNavigationWrapper(navController: NavController, onLogout: () -> Unit, 
             }
         }
     ) { padding ->
-        NavHost(
-            navController = bottomNavController,
-            startDestination = "vendor_home_screen",
-            modifier = Modifier.padding(bottom = padding.calculateBottomPadding())
-        ) {
-            composable("vendor_home_screen") { VendorHomeScreen(navController, onLogout) }
-            composable("vendor_products") { Text("Products Screen") }
-            composable("vendor_orders") { Text("Orders Screen") }
-            composable("vendor_stats") { Text("Stats Screen") }
-            composable("vendor_profile") { VendorProfileScreen(navController, onLogout) }
+        Box(modifier = Modifier.padding(padding)) {
+            NavHost(
+                navController = bottomNavController,
+                startDestination = "vendor_home_screen"
+            ) {
+                composable("vendor_home_screen") { VendorHomeScreen(navController, onLogout) }
+                composable("vendor_products") { ProductListScreen(navController) }
+                composable("vendor_orders") { Text("Orders Screen") }
+                composable("vendor_stats") { Text("Stats Screen") }
+                composable("vendor_profile") { VendorProfileScreen(navController, onLogout) }
+            }
         }
     }
 }
