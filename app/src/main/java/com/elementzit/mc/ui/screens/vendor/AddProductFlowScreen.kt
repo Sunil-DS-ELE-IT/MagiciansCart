@@ -20,7 +20,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.rounded.Search
@@ -46,6 +48,8 @@ import com.elementzit.mc.ui.components.FormLabel
 import com.elementzit.mc.ui.components.RoundedTextField
 import com.elementzit.mc.ui.components.TagChip
 import com.elementzit.mc.ui.viewmodel.AddProductViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
 // CategoryItem definition removed to use the one from CategoryItem.kt
 
@@ -53,9 +57,11 @@ enum class AddProductStep {
     SELECT_CATEGORY,
     DETAILS,
     MORE_DETAILS,
-    PRICE_QTY_IMAGE
+    PRICE_QTY_IMAGE,
+    DURATION
 }
 
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AddProductFlowScreen(
     navController: NavController,
@@ -86,6 +92,12 @@ fun AddProductFlowScreen(
     var productMinQuantity by remember { mutableStateOf("") }
     var showImageUpload by remember { mutableStateOf(false) }
 
+    // New Duration step states
+    var selectedDuration by remember { mutableStateOf("") }
+    var deliveryDate by remember { mutableStateOf("") }
+    var shippingMethod by remember { mutableStateOf("Express Shipping") }
+    var deliveryNotes by remember { mutableStateOf("") }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
@@ -107,6 +119,7 @@ fun AddProductFlowScreen(
                 selectedImageUris.isEmpty() && showImageUpload -> "At least one product image is required"
                 else -> null
             }
+            AddProductStep.DURATION -> if (selectedDuration.isBlank()) "Please select a production duration" else null
         }
     }
 
@@ -197,24 +210,47 @@ fun AddProductFlowScreen(
                                 currentStep = AddProductStep.MORE_DETAILS
                             }
                         },
-                        onSubmit = {
+                        onNext = {
                             val error = validateStep(AddProductStep.PRICE_QTY_IMAGE)
                             if (error == null) {
                                 if (!showImageUpload) {
                                     showImageUpload = true
                                 } else {
-                                    viewModel.saveProduct(Product(
-                                        id = productId ?: "",
-                                        name = productName,
-                                        description = productDescription,
-                                        brand = brandName,
-                                        sku = sku,
-                                        price = productPrice.toDoubleOrNull() ?: 0.0,
-                                        category = selectedCategory,
-                                        stock = productQuantityAvailable.toIntOrNull() ?: 0,
-                                        tags = productTags
-                                    ), productId != null)
+                                    currentStep = AddProductStep.DURATION
                                 }
+                            } else Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+                AddProductStep.DURATION -> {
+                    ProductDurationView(
+                        selectedDuration = selectedDuration,
+                        onDurationChange = { selectedDuration = it },
+                        deliveryDate = deliveryDate,
+                        onDeliveryDateChange = { deliveryDate = it },
+                        shippingMethod = shippingMethod,
+                        onShippingMethodChange = { shippingMethod = it },
+                        deliveryNotes = deliveryNotes,
+                        onDeliveryNotesChange = { deliveryNotes = it },
+                        onBack = { currentStep = AddProductStep.PRICE_QTY_IMAGE },
+                        onSubmit = {
+                            val error = validateStep(AddProductStep.DURATION)
+                            if (error == null) {
+                                viewModel.saveProduct(Product(
+                                    id = productId ?: "",
+                                    name = productName,
+                                    description = productDescription,
+                                    brand = brandName,
+                                    sku = sku,
+                                    price = productPrice.toDoubleOrNull() ?: 0.0,
+                                    category = selectedCategory,
+                                    stock = productQuantityAvailable.toIntOrNull() ?: 0,
+                                    tags = productTags,
+                                    duration = selectedDuration,
+                                    expectedDeliveryDate = deliveryDate,
+                                    shippingMethod = shippingMethod,
+                                    deliveryNotes = deliveryNotes
+                                ), productId != null)
                             } else Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
                         }
                     )
@@ -496,7 +532,7 @@ fun PriceQtyImageStepView(
     onImageSelectClick: () -> Unit,
     onRemoveImage: (String) -> Unit,
     showImageUpload: Boolean,
-    onBack: () -> Unit, onSubmit: () -> Unit
+    onBack: () -> Unit, onNext: () -> Unit
 ) {
     val scrollState = rememberScrollState()
     val orangeColor = Color(0xFFFF9800)
@@ -578,10 +614,92 @@ fun PriceQtyImageStepView(
             }
             StepBottomButtons(
                 onBack = onBack,
-                onNext = onSubmit,
-                nextText = if(showImageUpload) "Submit" else "Next",
-                isNextEnabled = if(showImageUpload) selectedImageUris.isNotEmpty() else true
+                onNext = onNext,
+                nextText = "Next"
             )
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProductDurationView(selectedDuration: String, onDurationChange: (String) -> Unit, deliveryDate: String, onDeliveryDateChange: (String) -> Unit, shippingMethod: String, onShippingMethodChange: (String) -> Unit, deliveryNotes: String, onDeliveryNotesChange: (String) -> Unit, onBack: () -> Unit, onSubmit: () -> Unit) {
+    val durations = listOf("1-3 days", "3-5 days", "5-7 days", "7-10 days", "10-14 days", "Custom")
+    val methods = listOf("Express Shipping", "Same Day Delivery", "Pickup only")
+    var expanded by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let {
+                        val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                        onDeliveryDateChange(formatter.format(Date(it)))
+                    }
+                    showDatePicker = false
+                }) { Text("OK") }
+            }
+        ) { DatePicker(state = datePickerState) }
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF9F9F9)).padding(bottom = 20.dp)) {
+        HeaderSection()
+        Column(modifier = Modifier.weight(1f).padding(16.dp).verticalScroll(rememberScrollState())) {
+            FormLabel("Production Duration")
+            Spacer(modifier = Modifier.height(12.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { durations.forEach { duration -> FilterChip(selected = selectedDuration == duration, onClick = { onDurationChange(duration) }, label = { Text(duration) }) } }
+            Spacer(modifier = Modifier.height(16.dp))
+            FormLabel("Expected Delivery Date")
+            Spacer(modifier = Modifier.height(8.dp))
+            Box {
+                OutlinedTextField(
+                    value = deliveryDate, 
+                    onValueChange = {}, 
+                    readOnly = true, 
+                    modifier = Modifier.fillMaxWidth(), 
+                    trailingIcon = { Icon(Icons.Default.DateRange, null) },
+                    enabled = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable { showDatePicker = true }
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            FormLabel("Shipping Method")
+            Spacer(modifier = Modifier.height(8.dp))
+            Box {
+                OutlinedTextField(
+                    value = shippingMethod, 
+                    onValueChange = {}, 
+                    readOnly = true, 
+                    modifier = Modifier.fillMaxWidth(), 
+                    trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable { expanded = true }
+                )
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) { 
+                    methods.forEach { method -> 
+                        DropdownMenuItem(text = { Text(method) }, onClick = { onShippingMethodChange(method); expanded = false }) 
+                    } 
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            FormLabel("Delivery Notes")
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(value = deliveryNotes, onValueChange = onDeliveryNotesChange, modifier = Modifier.fillMaxWidth().height(100.dp), placeholder = { Text("Add any special delivery instructions...") })
+        }
+        StepBottomButtons(onBack = onBack, onNext = onSubmit, nextText = "Submit")
     }
 }
