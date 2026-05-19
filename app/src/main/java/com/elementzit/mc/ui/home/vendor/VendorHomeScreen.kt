@@ -339,13 +339,13 @@ fun DetailedProductItem(
             ) {
                 Button(
                     onClick = { navController.navigate("edit_product/${product.id}") }, 
-                    modifier = Modifier.weight(1f).height(54.dp), 
+                    modifier = Modifier.weight(1f).height(40.dp),
                     shape = RoundedCornerShape(27.dp), 
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8C00))
                 ) {
                     Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(20.dp), tint = Color.White)
                     Spacer(Modifier.width(8.dp))
-                    Text("Edit", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Edit", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 
                 Surface(

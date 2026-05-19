@@ -20,6 +20,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.elementzit.mc.ui.home.vendor.VendorHomeScreen
 import com.elementzit.mc.ui.screens.vendor.ProductListScreen
+import com.elementzit.mc.ui.screens.vendor.OrderScreen
 import com.elementzit.mc.ui.viewmodel.VendorProductViewModel
 
 data class BottomNavItem(val title: String, val icon: ImageVector, val route: String)
@@ -81,9 +82,9 @@ fun VendorNavigationWrapper(navController: NavController, onLogout: () -> Unit, 
             ) {
                 composable("vendor_home_screen") { VendorHomeScreen(navController, onLogout) }
                 composable("vendor_products") { ProductListScreen(navController) }
-                composable("vendor_orders") { Text("Orders Screen") }
+                composable("vendor_orders") { OrderScreen(navController) }
                 composable("vendor_stats") { Text("Stats Screen") }
-                composable("vendor_profile") { VendorProfileScreen(navController, onLogout) }
+                composable("vendor_profile") { Text("Vendor Profile Screen") } // Placeholder since VendorProfileScreen is missing from imports
             }
         }
     }
