@@ -227,11 +227,11 @@ fun OrderStatCard(label: String, count: String, color: Color, modifier: Modifier
                 color = color
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(count, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(count, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Text(label, fontSize = 9.sp, color = Color(0xFF6B7280), fontWeight = FontWeight.Medium, maxLines = 1)
+            Text(label, fontSize = 8.sp, color = Color(0xFF6B7280), fontWeight = FontWeight.Medium, maxLines = 1)
         }
     }
 }
