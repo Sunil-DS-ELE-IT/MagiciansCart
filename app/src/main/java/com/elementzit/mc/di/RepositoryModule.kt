@@ -1,10 +1,12 @@
 package com.elementzit.mc.di
 
 import com.elementzit.mc.data.repository.AuthRepositoryImpl
+import com.elementzit.mc.data.repository.OrderRepositoryImpl
 import com.elementzit.mc.data.repository.ProductRepository
 import com.elementzit.mc.data.repository.ProductRepositoryImpl
 import com.elementzit.mc.data.repository.VendorRepositoryImpl
 import com.elementzit.mc.domain.repository.AuthRepository
+import com.elementzit.mc.domain.repository.OrderRepository
 import com.elementzit.mc.domain.repository.VendorRepository
 import dagger.Module
 import dagger.Provides
@@ -42,5 +44,11 @@ object RepositoryModule {
     @Singleton
     fun provideVendorRepository(vendorRepositoryImpl: VendorRepositoryImpl): VendorRepository {
         return vendorRepositoryImpl
+    }
+
+    @Provides
+    @Singleton
+    fun provideOrderRepository(orderRepositoryImpl: OrderRepositoryImpl): OrderRepository {
+        return orderRepositoryImpl
     }
 }

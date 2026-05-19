@@ -38,7 +38,7 @@ fun OrderSuccessScreen(
         Text("Order Placed Successfully! 🎉", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            "Thank you for shopping with Magician's Cart. Your order has been confirmed!",
+            "Your order has been placed. The vendor has been notified and will confirm your delivery date shortly.",
             textAlign = TextAlign.Center,
             color = Color.Gray
         )
@@ -64,7 +64,12 @@ fun OrderSuccessScreen(
                     shape = RoundedCornerShape(8.dp),
                     color = Color(0xFFFFF3E0)
                 ) {
-                    Text("Estimated Delivery: Thu, May 15, 2026", modifier = Modifier.padding(12.dp), color = Color(0xFFEF6C00))
+                    Text(
+                        "Status: Pending Vendor Confirmation", 
+                        modifier = Modifier.padding(12.dp), 
+                        color = Color(0xFFEF6C00),
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

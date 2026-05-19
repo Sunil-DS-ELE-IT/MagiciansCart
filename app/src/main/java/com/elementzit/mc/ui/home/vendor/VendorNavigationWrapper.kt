@@ -20,6 +20,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.elementzit.mc.ui.home.vendor.VendorHomeScreen
 import com.elementzit.mc.ui.screens.vendor.ProductListScreen
+import com.elementzit.mc.ui.screens.vendor.VendorOrdersScreen
 import com.elementzit.mc.ui.viewmodel.VendorProductViewModel
 
 data class BottomNavItem(val title: String, val icon: ImageVector, val route: String)
@@ -28,7 +29,7 @@ data class BottomNavItem(val title: String, val icon: ImageVector, val route: St
 fun VendorNavigationWrapper(navController: NavController, onLogout: () -> Unit, viewModel: VendorProductViewModel = hiltViewModel()) {
     val bottomNavController = rememberNavController()
     val items = listOf(
-        BottomNavItem("Home", Icons.Outlined.GridView, "vendor_home_screen"),
+        BottomNavItem("Dashboard", Icons.Outlined.GridView, "vendor_home_screen"),
         BottomNavItem("Products", Icons.Outlined.Inventory2, "vendor_products"),
         BottomNavItem("Orders", Icons.AutoMirrored.Outlined.ListAlt, "vendor_orders"),
         BottomNavItem("Analytics", Icons.Outlined.QueryStats, "vendor_stats"),
@@ -81,7 +82,7 @@ fun VendorNavigationWrapper(navController: NavController, onLogout: () -> Unit, 
             ) {
                 composable("vendor_home_screen") { VendorHomeScreen(navController, onLogout) }
                 composable("vendor_products") { ProductListScreen(navController) }
-                composable("vendor_orders") { Text("Orders Screen") }
+                composable("vendor_orders") { VendorOrdersScreen(navController) }
                 composable("vendor_stats") { Text("Stats Screen") }
                 composable("vendor_profile") { VendorProfileScreen(navController, onLogout) }
             }

@@ -38,6 +38,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.elementzit.mc.domain.model.Product
 import com.sds.marketplace.ui.home.components.ProductCard
 import com.elementzit.mc.ui.screens.customer.CartScreen
+import com.elementzit.mc.ui.screens.customer.CustomerOrdersScreen
 import com.elementzit.mc.ui.viewmodel.CartViewModel
 import com.elementzit.mc.ui.viewmodel.CustomerProductViewModel
 import com.elementzit.mc.utils.rememberCurrentLocationData
@@ -64,6 +65,7 @@ fun CustomerHomeScreen(
     var fullScreenList: List<Product>? by remember { mutableStateOf(null) }
     var fullScreenTitle by remember { mutableStateOf("") }
     var fullScreenSearchQuery by remember { mutableStateOf("") }
+    var showCustomerOrders by remember { mutableStateOf(false) }
 
     val products by viewModel.products.collectAsState(initial = emptyList())
     val cartItems by cartViewModel.cartItems.collectAsState()
@@ -138,7 +140,10 @@ fun CustomerHomeScreen(
                         val activeColor = Color(0xFFFF5722)
                         NavigationBarItem(
                             selected = isSelected,
-                            onClick = { selectedNavItem = index },
+                            onClick = { 
+                                selectedNavItem = index
+                                if (index != 3) showCustomerOrders = false
+                            },
                             icon = {
                                 BadgedBox(
                                     badge = {
@@ -175,7 +180,17 @@ fun CustomerHomeScreen(
                         )
                         1 -> CartScreen(navController = navController, viewModel = cartViewModel)
                         2 -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Wishlist") }
-                        3 -> ProfileContent(onLogout = onLogout, navController = navController)
+                        3 -> {
+                            if (showCustomerOrders) {
+                                CustomerOrdersScreen(onBack = { showCustomerOrders = false })
+                            } else {
+                                ProfileContent(
+                                    onLogout = onLogout, 
+                                    navController = navController,
+                                    onMyOrdersClick = { showCustomerOrders = true }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -401,7 +416,11 @@ private fun CategorySection(selectedCategory: String, onCategorySelected: (Strin
 }
 
 @Composable
-private fun ProfileContent(navController: NavController, onLogout: () -> Unit) {
+private fun ProfileContent(
+    navController: NavController, 
+    onLogout: () -> Unit,
+    onMyOrdersClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -430,7 +449,9 @@ private fun ProfileContent(navController: NavController, onLogout: () -> Unit) {
         val menuItems = listOf("My Orders", "Shipping Address", "Payment Methods", "Settings")
         menuItems.forEach { item ->
             OutlinedButton(
-                onClick = { /* Handle menu item click */ },
+                onClick = { 
+                    if (item == "My Orders") onMyOrdersClick()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
