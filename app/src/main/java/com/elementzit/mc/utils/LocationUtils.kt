@@ -24,23 +24,37 @@ fun rememberCurrentLocationData(): Pair<String, Location?> {
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     
     val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            updateLocation(context, fusedLocationClient) { name, loc -> locationName = name; locationObj = loc }
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        
+        if (fineGranted || coarseGranted) {
+            updateLocation(context, fusedLocationClient) { name, loc -> 
+                locationName = name
+                locationObj = loc 
+            }
         } else {
             locationName = "Permission Denied"
         }
     }
 
     LaunchedEffect(Unit) {
-        when (PackageManager.PERMISSION_GRANTED) {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) -> {
-                updateLocation(context, fusedLocationClient) { name, loc -> locationName = name; locationObj = loc }
+        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        
+        if (hasFine || hasCoarse) {
+            updateLocation(context, fusedLocationClient) { name, loc -> 
+                locationName = name
+                locationObj = loc 
             }
-            else -> {
-                launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-            }
+        } else {
+            launcher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
 
@@ -53,13 +67,23 @@ private fun updateLocation(context: Context, client: FusedLocationProviderClient
             if (location != null) {
                 val geocoder = Geocoder(context, Locale.getDefault())
                 @Suppress("DEPRECATION")
-                val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-                onUpdate(addresses?.firstOrNull()?.locality ?: "Unknown", location)
+                val addresses = try {
+                    geocoder.getFromLocation(location.latitude, location.longitude, 1)
+                } catch (e: Exception) {
+                    null
+                }
+                
+                val locality = addresses?.firstOrNull()?.locality
+                val subAdminArea = addresses?.firstOrNull()?.subAdminArea 
+                
+                onUpdate(locality ?: subAdminArea ?: "Unknown Location", location)
             } else {
-                onUpdate("Unavailable", null)
+                onUpdate("Location Unavailable", null)
             }
+        }.addOnFailureListener {
+            onUpdate("Error Fetching", null)
         }
     } catch (e: SecurityException) {
-        onUpdate("Error", null)
+        onUpdate("Permission Error", null)
     }
 }

@@ -84,7 +84,7 @@ fun VendorNavigationWrapper(navController: NavController, onLogout: () -> Unit, 
                 composable("vendor_products") { ProductListScreen(navController) }
                 composable("vendor_orders") { OrderScreen(navController) }
                 composable("vendor_stats") { Text("Stats Screen") }
-                composable("vendor_profile") { Text("Vendor Profile Screen") } // Placeholder since VendorProfileScreen is missing from imports
+                composable("vendor_profile") { VendorProfileScreen(navController, onLogout) } // Placeholder since VendorProfileScreen is missing from imports
             }
         }
     }

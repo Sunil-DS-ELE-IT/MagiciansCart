@@ -1,5 +1,7 @@
 package com.elementzit.mc.ui.auth.login
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,8 +20,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +35,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.elementzit.mc.R
 import com.elementzit.mc.domain.model.UserRole
 import com.elementzit.mc.ui.auth.AuthState
 import com.elementzit.mc.ui.auth.AuthViewModel
@@ -61,6 +66,8 @@ fun LoginScreen(
 
     val authState by viewModel.authState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val scale = remember { Animatable(0f) }
 
     LaunchedEffect(authState) {
         when (val state = authState) {
@@ -243,12 +250,19 @@ fun LoginScreen(
 
 @Composable
 private fun LogoSection() {
-    Surface(modifier = Modifier.size(72.dp), shape = RoundedCornerShape(20.dp), color = Orange, shadowElevation = 4.dp) {
+    Surface(modifier = Modifier.size(60.dp),) {
         Box(contentAlignment = Alignment.Center) {
-            Text("✦", color = Color.Yellow, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+           // Text("✦", color = Color.Yellow, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Image(
+                painter = painterResource(id = R.drawable.ic_login),
+                contentDescription = "App Logo",
+                modifier = Modifier
+                    .size(50.dp)
+                   // .scale(scale().value)
+            )
         }
     }
-    Spacer(modifier = Modifier.height(12.dp))
+    Spacer(modifier = Modifier.height(8.dp))
     Text("Magician's Cart", color = TextDark, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
     Text("Vendor Management Portal", color = Color.Gray, fontSize = 12.sp)
 }

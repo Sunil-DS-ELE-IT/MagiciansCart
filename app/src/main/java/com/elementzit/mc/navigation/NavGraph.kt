@@ -45,12 +45,21 @@ fun MarketplaceNavGraph(
         startDestination = "splash",
         modifier = modifier
     ) {
-        composable("splash") {
+       /* composable("splash") {
             SplashScreen(onSplashFinished = {
                 navController.navigate("login") {
                     popUpTo("splash") { inclusive = true }
                 }
             })
+        }*/
+        composable("splash") {
+            SplashScreen(navController = navController,
+                )
+            /*SplashScreen(
+                navController.navigate("login") {
+                    popUpTo("splash") { inclusive = true }
+                }
+            )*/
         }
         composable("login") {
             LoginScreen(
