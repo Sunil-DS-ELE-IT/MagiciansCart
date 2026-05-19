@@ -11,9 +11,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * ViewModel for managing user authentication state, including registration and login.
- */
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val loginUseCase: LoginUseCase,
@@ -23,9 +20,9 @@ class AuthViewModel @Inject constructor(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
 
-    /**
-     * Attempts to register a new user with the provided details.
-     */
+    // Store the role from the first step to use in final success
+    private var authenticatedRole: UserRole = UserRole.CUSTOMER
+
     fun register(name: String, email: String, role: UserRole, password: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
@@ -39,35 +36,47 @@ class AuthViewModel @Inject constructor(
     }
 
     /**
-     * Attempts to log in a user with the provided credentials.
+     * Step 1: Real Firebase authentication with Email and Password
      */
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             val result = loginUseCase(email, password)
             result.onSuccess { user ->
-                _authState.value = AuthState.LoginSuccess(user.role)
+                // Authentication successful, now proceed to dummy OTP step
+                authenticatedRole = user.role
+                _authState.value = AuthState.OtpRequired
             }.onFailure { e ->
-                _authState.value = AuthState.Error(e.message ?: "Login failed")
+                _authState.value = AuthState.Error(e.message ?: "Invalid Email or Password")
             }
         }
     }
 
     /**
-     * Resets the authentication state to [AuthState.Idle].
+     * Step 2: Dummy OTP verification
      */
+    fun verifyOtp(otp: String) {
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            // Dummy OTP validation (any non-empty input is accepted)
+            if (otp.isNotEmpty()) {
+                _authState.value = AuthState.LoginSuccess(authenticatedRole)
+            } else {
+                _authState.value = AuthState.Error("Invalid OTP")
+            }
+        }
+    }
+
     fun resetState() {
         _authState.value = AuthState.Idle
     }
 }
 
-/**
- * Represents the possible states of the authentication process.
- */
 sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
     object RegisterSuccess : AuthState()
+    object OtpRequired : AuthState()
     data class LoginSuccess(val role: UserRole) : AuthState()
     data class Error(val message: String) : AuthState()
 }

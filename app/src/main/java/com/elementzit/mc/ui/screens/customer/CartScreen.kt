@@ -144,7 +144,7 @@ fun CartItemRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                model = item.product.imageUrl,
+                model = item.product.imageUrls.firstOrNull() ?: item.product.imageUrl,
                 contentDescription = null,
                 modifier = Modifier
                     .size(80.dp)

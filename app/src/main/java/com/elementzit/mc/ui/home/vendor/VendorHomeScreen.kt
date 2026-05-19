@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -187,15 +188,17 @@ fun DetailedProductItem(
                 // Product Image with status overlay
                 Box(modifier = Modifier.size(85.dp)) {
                     Surface(
-                        modifier = Modifier.fillMaxSize(), 
-                        shape = RoundedCornerShape(20.dp), 
+                        modifier = Modifier.fillMaxSize(),
+                        shape = RoundedCornerShape(16.dp),
                         color = Color(0xFFFFF7ED)
                     ) {
                         AsyncImage(
                             model = product.imageUrls.firstOrNull() ?: product.imageUrl,
-                            contentDescription = product.name,
-                            modifier = Modifier.fillMaxSize().padding(12.dp),
-                            contentScale = ContentScale.Fit
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
                         )
                     }
                     if (product.stock > 0) {

@@ -67,30 +67,41 @@ class AuthRepositoryImpl @Inject constructor(
     /**
      * Authenticates a user with Firebase and retrieves their profile.
      */
+    // In AuthRepositoryImpl.kt
     override suspend fun login(email: String, password: String): Result<User> {
         return try {
+            // Force sign out existing session to ensure clean login attempt
+            firebaseAuth.signOut()
+            // 1. Firebase Authentication
             firebaseAuth.signInWithEmailAndPassword(email, password).await()
             val uid = firebaseAuth.currentUser?.uid ?: throw Exception("Auth failed")
 
-            // Retrieve profile from Firestore
+            // 2. Firestore Profile
             val doc = firestore.collection("users").document(uid).get().await()
             if (doc.exists()) {
+                val role = UserRole.valueOf(doc.getString("role") ?: "CUSTOMER")
+                val status = doc.getString("status") ?: "PENDING"
+
+                // 3. Strict Vendor Approval Check
+                if (role == UserRole.VENDOR && status != "APPROVED") {
+                    // Logout the user because they are not allowed to proceed
+                    firebaseAuth.signOut()
+                    return Result.failure(Exception("Vendor account is pending approval"))
+                }
+
                 val user = User(
                     id = uid,
                     name = doc.getString("name") ?: "",
                     email = doc.getString("email") ?: "",
-                    role = UserRole.valueOf(doc.getString("role") ?: "CUSTOMER"),
-                    status = doc.getString("status") ?: "APPROVED"
+                    role = role,
+                    status = status
                 )
-                
-                // Optional: You could block login here if (user.role == UserRole.VENDOR && user.status == "PENDING")
-
                 Result.success(user)
             } else {
-                Result.failure(Exception("User profile not found in database"))
+                Result.failure(Exception("User profile not found"))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(e) // This should catch wrong password errors
         }
     }
 

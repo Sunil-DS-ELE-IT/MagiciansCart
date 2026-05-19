@@ -86,9 +86,9 @@ fun ProductListScreen(
                         ) {}
                     }
                 }
-                
+
                 Spacer(Modifier.height(16.dp))
-                
+
                 OutlinedTextField(
                     value = searchQuery, onValueChange = { viewModel.onSearchQueryChange(it) },
                     modifier = Modifier.fillMaxWidth(),
@@ -102,9 +102,9 @@ fun ProductListScreen(
                         unfocusedBorderColor = Color.Transparent
                     )
                 )
-                
+
                 Spacer(Modifier.height(16.dp))
-                
+
                 Text("Welcome Back, Alwyn 👋", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
                 Text("Here's what's happening with your store today", color = Color.Gray, fontSize = 14.sp)
             }
@@ -268,8 +268,8 @@ fun ProductListCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.Top) {
-                // Image Box - Increased size from 80.dp to 100.dp
-                Box(modifier = Modifier.size(100.dp)) {
+                // Image Box
+                Box(modifier = Modifier.size(80.dp)) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         shape = RoundedCornerShape(16.dp),
@@ -277,19 +277,21 @@ fun ProductListCard(
                     ) {
                         AsyncImage(
                             model = product.imageUrls.firstOrNull() ?: product.imageUrl,
-                            contentDescription = product.name,
-                            modifier = Modifier.fillMaxSize().padding(8.dp),
-                            contentScale = ContentScale.Fit
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
                         )
                     }
                     if (product.stock > 0) {
                         Surface(
-                            modifier = Modifier.size(24.dp).align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp),
+                            modifier = Modifier.size(20.dp).align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp),
                             shape = CircleShape,
                             color = Color(0xFF10B981),
                             border = BorderStroke(1.5.dp, Color.White)
                         ) {
-                            Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.padding(4.dp))
+                            Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.padding(3.dp))
                         }
                     }
                 }
@@ -388,7 +390,7 @@ fun ProductListCard(
                     Spacer(Modifier.width(8.dp))
                     Text("Edit", fontWeight = FontWeight.Bold)
                 }
-                
+
                 ProductActionIcon(if (product.isVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, onVisibilityToggle)
                 ProductActionIcon(Icons.Outlined.ContentCopy, onCopy)
                 ProductActionIcon(Icons.Outlined.Delete, onDelete, isDanger = true)
@@ -408,8 +410,8 @@ fun ProductActionIcon(icon: ImageVector, onClick: () -> Unit, isDanger: Boolean 
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
-                icon, 
-                null, 
+                icon,
+                null,
                 tint = if (isDanger) Color(0xFFEF4444).copy(alpha = 0.8f) else Color(0xFF4B5563),
                 modifier = Modifier.size(20.dp)
             )
