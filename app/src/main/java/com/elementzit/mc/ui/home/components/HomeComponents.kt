@@ -97,7 +97,7 @@ fun ProductCard(
                     .height(180.dp)
             ) {
                 AsyncImage(
-                    model = product.imageUrl,
+                    model = product.imageUrls.firstOrNull() ?: product.imageUrl,
                     contentDescription = product.name,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop

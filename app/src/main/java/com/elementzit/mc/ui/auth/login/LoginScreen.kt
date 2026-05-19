@@ -56,6 +56,7 @@ fun LoginScreen(
 
     var emailOrPhoneError by remember { mutableStateOf<String?>(null) }
     var phoneError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
     var otpError by remember { mutableStateOf<String?>(null) }
 
     val authState by viewModel.authState.collectAsState()
@@ -143,14 +144,19 @@ fun LoginScreen(
                     AuthLabel("Password")
                     CustomTextField(
                         value = password,
-                        onValueChange = { password = it },
+                        onValueChange = { 
+                            password = it 
+                            passwordError = null
+                        },
                         placeholder = "••••••••",
                         leadingIcon = Icons.Outlined.Lock,
                         keyboardType = KeyboardType.Password,
+                        isError = passwordError != null,
                         isPassword = true,
                         passwordVisible = passwordVisible,
                         onVisibilityChange = { passwordVisible = !passwordVisible }
                     )
+                    ErrorText(passwordError)
                 } else {
                     // OTP Verification View
                     AuthLabel("Verify OTP")
@@ -171,18 +177,29 @@ fun LoginScreen(
                 Button(
                     onClick = {
                         if (!isOtpSent) {
+                            var isValid = true
                             if (emailOrPhone.isBlank() || !emailOrPhone.contains("@")) {
                                 emailOrPhoneError = "Invalid email"
-                            } else if (phone.length < 10) {
+                                isValid = false
+                            }
+                            if (phone.length < 10) {
                                 phoneError = "Invalid phone number"
-                            } else {
-                                viewModel.sendOtp(phone)
+                                isValid = false
+                            }
+                            if (password.isBlank()) {
+                                passwordError = "Password cannot be empty"
+                                isValid = false
+                            }
+                            
+                            // IF ALL FIELDS ARE FILLED PROPERLY, VERIFY PASSWORD WITH FIREBASE
+                            if (isValid) {
+                                viewModel.loginAndSendOtp(emailOrPhone, password)
                             }
                         } else {
                             if (otpValue.length < 6) {
                                 otpError = "Enter 6-digit OTP"
                             } else {
-                                viewModel.verifyOtp(phone, emailOrPhone, otpValue)
+                                viewModel.verifyOtp(otpValue)
                             }
                         }
                     },

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.elementzit.mc.domain.model.Product
 import com.elementzit.mc.domain.repository.AuthRepository
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,8 @@ class VendorProductViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _allProducts = MutableStateFlow<List<Product>>(emptyList())
+    val allProducts: StateFlow<List<Product>> = _allProducts
+    
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
@@ -37,15 +40,28 @@ class VendorProductViewModel @Inject constructor(
     val vendorProfile: StateFlow<Map<String, Any>?> = _vendorProfile
 
     init {
-        // Only trigger if user is logged in
+        loadVendorData()
+    }
+
+    private fun loadVendorData() {
         val uid = getCurrentUserId()
+        val user = FirebaseAuth.getInstance().currentUser
+
+        if (user == null) {
+            Log.e("Firestore", "User not logged in")
+            return
+        }
+        Log.d("VendorProductViewModel", "init: Checking user ID: $uid")
         if (uid != null) {
             fetchProducts()
             fetchVendorStatus()
             fetchVendorProfile()
         } else {
-            Log.e("VendorProductViewModel", "User not logged in, cannot fetch data")
-            _vendorStatus.value = "ERROR"
+            // Retry logic or wait for authentication
+            Log.e("VendorProductViewModel", "User not logged in, cannot fetch data. Retrying...")
+            // If you are using a navigation pattern where login precedes this, 
+            // the ViewModel might be initialized before the user is fully logged in.
+            // You may need a listener or a more reactive approach here.
         }
     }
 
@@ -79,20 +95,25 @@ class VendorProductViewModel @Inject constructor(
     fun getCurrentUserId(): String? = authRepository.getCurrentUserId()
 
     fun fetchProducts() {
-        val uid = getCurrentUserId() ?: return
-        viewModelScope.launch {
-            firestore.collection("products")
-                .whereEqualTo("vendorId", uid)
-                .addSnapshotListener { snapshot, e ->
-                    if (e != null) {
-                        Log.e("VendorProductViewModel", "Products listen failed", e)
-                        return@addSnapshotListener
-                    }
-                    if (snapshot != null) {
-                        _allProducts.value = snapshot.toObjects(Product::class.java)
-                    }
-                }
+        val uid = getCurrentUserId()
+        if (uid == null) {
+            Log.e("VendorProductViewModel", "fetchProducts: UID is null")
+            return
         }
+        Log.d("VendorProductViewModel", "Fetching products for vendor: $uid")
+        firestore.collection("products")
+            .whereEqualTo("vendorId", uid)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.e("VendorProductViewModel", "Products listen failed", e)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val productList = snapshot.toObjects(Product::class.java)
+                    Log.d("VendorProductViewModel", "Successfully fetched ${productList.size} products")
+                    _allProducts.value = productList
+                }
+            }
     }
 
     fun updateVendorProfile(shopName: String, address: String, lat: Double, lng: Double) {

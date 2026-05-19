@@ -21,6 +21,9 @@ class AuthViewModel @Inject constructor(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
 
+    // Save the role from actual authentication
+    private var authenticatedRole: UserRole = UserRole.CUSTOMER
+
     fun register(name: String, email: String, role: UserRole, password: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
@@ -33,6 +36,9 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Standard Login
+     */
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
@@ -45,26 +51,36 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun sendOtp(phone: String) {
+    /**
+     * Step 1: Real Firebase authentication with Email and Password
+     * If it passes, it moves to the dummy OTP state
+     */
+    fun loginAndSendOtp(email: String, password: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
-            delay(1000)
-            _authState.value = AuthState.OtpSent
+            // Actually call Firebase to check email & password
+            val result = loginUseCase(email, password)
+            result.onSuccess { user ->
+                // Actual Firebase Authentication passed!
+                authenticatedRole = user.role
+                // Transition to OTP Screen
+                _authState.value = AuthState.OtpSent
+            }.onFailure { e ->
+                // Wrong password/email! Fail strictly.
+                _authState.value = AuthState.Error(e.message ?: "Invalid Email or Password")
+            }
         }
     }
 
-    fun verifyOtp(phone: String, email: String, otp: String) {
+    /**
+     * Step 2: Dummy OTP verification
+     */
+    fun verifyOtp(otp: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             delay(1000)
             if (otp == "123456") {
-                // Determine role based on email domain or hardcoded logic
-                val role = when {
-                    email.contains("admin") -> UserRole.ADMIN
-                    email.contains("vendor") -> UserRole.VENDOR
-                    else -> UserRole.CUSTOMER
-                }
-                _authState.value = AuthState.LoginSuccess(role)
+                _authState.value = AuthState.LoginSuccess(authenticatedRole)
             } else {
                 _authState.value = AuthState.Error("Invalid OTP. Please try again.")
             }
