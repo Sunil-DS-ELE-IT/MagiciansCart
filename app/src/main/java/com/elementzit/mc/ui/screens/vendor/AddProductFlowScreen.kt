@@ -53,8 +53,6 @@ import com.elementzit.mc.ui.viewmodel.AddProductViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-// CategoryItem definition removed to use the one from CategoryItem.kt
-
 enum class AddProductStep {
     SELECT_CATEGORY,
     DETAILS,
@@ -403,23 +401,38 @@ private fun StepBottomButtons(onBack: () -> Unit, onNext: () -> Unit, nextText: 
     ) {
         Button(
             onClick = onBack,
-            modifier = Modifier.weight(1f).height(70.dp),
+            modifier = Modifier.weight(1f).height(40.dp),
             shape = RoundedCornerShape(24.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5E7EB))
         ) {
-            Text("Back", color = Color(0xFF374151), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("Back", color = Color(0xFF374151), fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
         Button(
             onClick = onNext,
-            modifier = Modifier.weight(1f).height(70.dp).shadow(elevation = 12.dp, shape = RoundedCornerShape(24.dp)),
+            // Removed the explicit shadow modifier which causes the issue
+            modifier = Modifier.weight(1f).height(40.dp),
             shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = orangeColor),
-            enabled = isNextEnabled
+            colors = ButtonDefaults.buttonColors(
+                containerColor = orangeColor,
+                disabledContainerColor = Color.LightGray
+            ),
+            enabled = isNextEnabled,
+            // Use standard Button elevation instead of shadow modifier
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 12.dp, disabledElevation = 0.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(nextText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = nextText, 
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isNextEnabled) Color.White else Color.DarkGray
+                )
                 Spacer(modifier = Modifier.width(10.dp))
-                Text("›", fontSize = 26.sp)
+                Text(
+                    text = "›", 
+                    fontSize = 26.sp,
+                    color = if (isNextEnabled) Color.White else Color.DarkGray
+                )
             }
         }
     }
